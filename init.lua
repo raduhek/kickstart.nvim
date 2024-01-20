@@ -96,6 +96,29 @@ require('lazy').setup({
   },
 
   {
+    "nvim-tree/nvim-tree.lua",
+    version = "0.99.0",
+    lazy = false,
+    dependencies = {
+      "nvim-tree/nvim-web-devicons"
+    },
+    config = function() 
+      require("nvim-tree").setup {
+        renderer = {
+          group_empty = true
+        },
+        update_focused_file = {
+          enable = true,
+          update_root = false
+        },
+        git = {
+          enable = true
+        }
+      }
+    end,
+  },
+
+  {
     -- Autocompletion
     'hrsh7th/nvim-cmp',
     dependencies = {
@@ -246,6 +269,68 @@ require('lazy').setup({
   },
 
   {
+      "mfussenegger/nvim-dap",
+  },
+
+  {
+    "scalameta/nvim-metals",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      config = function (self, opts)
+        local dap = require("dap")
+
+        dap.configurations.scala = {
+          type = "scala",
+          request = "launch",
+          name = "RunOrTest"
+        }
+      end
+    },
+    ft = { "scala", "sbt", "java" },
+    opts = function()
+      local metals_config = require("metals").bare_config()
+      metals_config.settings = {
+        showImplicitArguments = true,
+        excludedPackages = { "akka.actor.typed.javadsl", "com.github.swagger.akka.javadsl" },
+      }
+      metals_config.capabilities = require("cmp_nvim_lsp").default_capabilities()
+      metals_config.on_attach = function(client, bufnr)
+        require("metals").setup_dap()
+
+        local map = vim.keymap.set
+        -- LSP mappings
+        map("n", "gD", vim.lsp.buf.definition)
+        map("n", "K", vim.lsp.buf.hover)
+        map("n", "gi", vim.lsp.buf.implementation)
+        map("n", "gr", vim.lsp.buf.references)
+        map("n", "gds", vim.lsp.buf.document_symbol)
+        map("n", "gws", vim.lsp.buf.workspace_symbol)
+        map("n", "<leader>cl", vim.lsp.codelens.run)
+        map("n", "<leader>sh", vim.lsp.buf.signature_help)
+        map("n", "<leader>rn", vim.lsp.buf.rename)
+        map("n", "<leader>f", vim.lsp.buf.format)
+        map("n", "<leader>ca", vim.lsp.buf.code_action)
+
+        map("n", "<leader>ws", function()
+          require("metals").hover_worksheet()
+        end)
+      end
+
+      return metals_config
+    end,
+    config = function(self, metals_config)
+      local nvim_metals_group = vim.api.nvim_create_augroup("nvim-metals", { clear = true })
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = self.ft,
+        callback = function()
+          require("metals").initialize_or_attach(metals_config)
+        end,
+        group = nvim_metals_group,
+      })
+    end
+  },
+
+  {
     -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     dependencies = {
@@ -326,6 +411,14 @@ vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next diagnos
 vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, { desc = 'Open floating diagnostic message' })
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostics list' })
 
+vim.keymap.set('n', '<C-h>', 'C-w>h', { desc = 'Easy navigation between panes' })
+vim.keymap.set('n', '<C-j>', 'C-w>j', { desc = 'Easy navigation between panes' })
+vim.keymap.set('n', '<C-k>', 'C-w>k', { desc = 'Easy navigation between panes' })
+vim.keymap.set('n', '<C-l>', 'C-w>l', { desc = 'Easy navigation between panes' })
+
+vim.keymap.set('n','<leader>tr', function () 
+  require("nvim-tree.api").tree.toggle({update_root = false, focus = true})
+  end, {desc = 'Open nvim tree'})
 -- [[ Highlight on yank ]]
 -- See `:help vim.highlight.on_yank()`
 local highlight_group = vim.api.nvim_create_augroup('YankHighlight', { clear = true })
@@ -409,7 +502,9 @@ end
 vim.keymap.set('n', '<leader>s/', telescope_live_grep_open_files, { desc = '[S]earch [/] in Open Files' })
 vim.keymap.set('n', '<leader>ss', require('telescope.builtin').builtin, { desc = '[S]earch [S]elect Telescope' })
 vim.keymap.set('n', '<leader>gf', require('telescope.builtin').git_files, { desc = 'Search [G]it [F]iles' })
-vim.keymap.set('n', '<leader>sf', require('telescope.builtin').find_files, { desc = '[S]earch [F]iles' })
+vim.keymap.set('n', '<leader>sf', function () 
+  require('telescope.builtin').find_files({path_display = {"truncate" }})
+end, { desc = '[S]earch [F]iles' })
 vim.keymap.set('n', '<leader>sh', require('telescope.builtin').help_tags, { desc = '[S]earch [H]elp' })
 vim.keymap.set('n', '<leader>sw', require('telescope.builtin').grep_string, { desc = '[S]earch current [W]ord' })
 vim.keymap.set('n', '<leader>sg', require('telescope.builtin').live_grep, { desc = '[S]earch by [G]rep' })
@@ -423,7 +518,7 @@ vim.keymap.set('n', '<leader>sr', require('telescope.builtin').resume, { desc = 
 vim.defer_fn(function()
   require('nvim-treesitter.configs').setup {
     -- Add languages to be installed here that you want installed for treesitter
-    ensure_installed = { 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'tsx', 'javascript', 'typescript', 'vimdoc', 'vim', 'bash' },
+    ensure_installed = { 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'tsx', 'javascript', 'typescript', 'vimdoc', 'vim', 'bash', 'json', 'scala' },
 
     -- Autoinstall languages that are not installed. Defaults to false (but you can change for yourself!)
     auto_install = false,
@@ -493,7 +588,7 @@ end, 0)
 
 -- [[ Configure LSP ]]
 --  This function gets run when an LSP connects to a particular buffer.
-local on_attach = function(_, bufnr)
+local mason_on_attach = function(_, bufnr)
   -- NOTE: Remember that lua is a real programming language, and as such it is possible
   -- to define small helper and utility functions so you don't have to repeat yourself
   -- many times.
@@ -603,7 +698,7 @@ mason_lspconfig.setup_handlers {
   function(server_name)
     require('lspconfig')[server_name].setup {
       capabilities = capabilities,
-      on_attach = on_attach,
+      on_attach = mason_on_attach,
       settings = servers[server_name],
       filetypes = (servers[server_name] or {}).filetypes,
     }
