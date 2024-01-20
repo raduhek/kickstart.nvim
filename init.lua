@@ -102,7 +102,7 @@ require('lazy').setup({
     dependencies = {
       "nvim-tree/nvim-web-devicons"
     },
-    config = function() 
+    config = function()
       require("nvim-tree").setup {
         renderer = {
           group_empty = true
@@ -268,23 +268,29 @@ require('lazy').setup({
     },
   },
 
-  {
-      "mfussenegger/nvim-dap",
-  },
+  "mfussenegger/nvim-dap",
+  "rcarriga/nvim-dap-ui",
 
   {
     "scalameta/nvim-metals",
     dependencies = {
       "nvim-lua/plenary.nvim",
-      config = function (self, opts)
-        local dap = require("dap")
+      {
+        "mfussenegger/nvim-dap",
+        config = function (self, opts)
 
-        dap.configurations.scala = {
-          type = "scala",
-          request = "launch",
-          name = "RunOrTest"
-        }
-      end
+          local dap = require("dap")
+
+          dap.configurations.scala = {
+            type = "scala",
+            request = "launch",
+            name = "RunOrTest",
+            metals = {
+              runType = "runOrTestFile",
+            }
+          }
+        end
+      },
     },
     ft = { "scala", "sbt", "java" },
     opts = function()
@@ -293,27 +299,59 @@ require('lazy').setup({
         showImplicitArguments = true,
         excludedPackages = { "akka.actor.typed.javadsl", "com.github.swagger.akka.javadsl" },
       }
+      metals_config.init_options.statusBarProvider = "on"
       metals_config.capabilities = require("cmp_nvim_lsp").default_capabilities()
       metals_config.on_attach = function(client, bufnr)
         require("metals").setup_dap()
+        require("dapui").setup()
 
         local map = vim.keymap.set
         -- LSP mappings
-        map("n", "gD", vim.lsp.buf.definition)
-        map("n", "K", vim.lsp.buf.hover)
-        map("n", "gi", vim.lsp.buf.implementation)
-        map("n", "gr", vim.lsp.buf.references)
-        map("n", "gds", vim.lsp.buf.document_symbol)
-        map("n", "gws", vim.lsp.buf.workspace_symbol)
-        map("n", "<leader>cl", vim.lsp.codelens.run)
-        map("n", "<leader>sh", vim.lsp.buf.signature_help)
-        map("n", "<leader>rn", vim.lsp.buf.rename)
-        map("n", "<leader>f", vim.lsp.buf.format)
-        map("n", "<leader>ca", vim.lsp.buf.code_action)
+        map("n", "gd", vim.lsp.buf.definition, {desc = 'Go to definition'})
+        map("n", "K", vim.lsp.buf.hover, {desc = 'Hover details'})
+        map("n", "gi", vim.lsp.buf.implementation, { desc = 'Show implementations'})
+        map("n", "gr", vim.lsp.buf.references, {desc = 'Go to references'})
+        map("n", "gds", vim.lsp.buf.document_symbol, {desc = 'Show symbols in document'})
+        map("n", "gws", vim.lsp.buf.workspace_symbol, {desc = 'Show symbols in workspace'})
+        map("n", "<leader>mc", require('telescope').extensions.metals.commands, {desc = 'Metals: show commands'})
+        map("n", "<leader>cl", vim.lsp.codelens.run, { desc = "Codelens run"})
+        map("n", "<leader>sh", vim.lsp.buf.signature_help, { desc = "Signature help"})
+        map("n", "<leader>rn", vim.lsp.buf.rename, { desc = "Rename"})
+        map("n", "<leader>f", vim.lsp.buf.format, { desc = "Format file"})
+        map("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "Codelens action"})
 
         map("n", "<leader>ws", function()
           require("metals").hover_worksheet()
-        end)
+        end, { desc = "Worksheet"})
+
+        map("n", "<leader>dc", function()
+          require("dap").continue()
+        end, { desc = "Continue"})
+
+        map("n", "<leader>dr", function()
+          require("dap").repl.toggle()
+        end, { desc = "REPL"})
+
+        map("n", "<leader>dK", function()
+          require("dapui").toggle()
+        end, { desc = "Debug UI"})
+
+        map("n", "<leader>dt", function()
+          require("dap").toggle_breakpoint()
+        end, { desc = "Toogle breakpoint"})
+
+        map("n", "<leader>dso", function()
+          require("dap").step_over()
+        end, { desc = "Step over"})
+
+        map("n", "<leader>dsi", function()
+          require("dap").step_into()
+        end, { desc = "Step into"})
+
+        map("n", "<leader>dl", function()
+          require("dap").run_last()
+        end, { desc = "Run last"})
+
       end
 
       return metals_config
@@ -411,10 +449,10 @@ vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next diagnos
 vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, { desc = 'Open floating diagnostic message' })
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostics list' })
 
-vim.keymap.set('n', '<C-h>', 'C-w>h', { desc = 'Easy navigation between panes' })
-vim.keymap.set('n', '<C-j>', 'C-w>j', { desc = 'Easy navigation between panes' })
-vim.keymap.set('n', '<C-k>', 'C-w>k', { desc = 'Easy navigation between panes' })
-vim.keymap.set('n', '<C-l>', 'C-w>l', { desc = 'Easy navigation between panes' })
+vim.keymap.set('n', '<C-h>', '<C-w>h', { desc = 'Easy navigation between panes' })
+vim.keymap.set('n', '<C-j>', '<C-w>j', { desc = 'Easy navigation between panes' })
+vim.keymap.set('n', '<C-k>', '<C-w>k', { desc = 'Easy navigation between panes' })
+vim.keymap.set('n', '<C-l>', '<C-w>l', { desc = 'Easy navigation between panes' })
 
 vim.keymap.set('n','<leader>tr', function () 
   require("nvim-tree.api").tree.toggle({update_root = false, focus = true})
@@ -442,6 +480,7 @@ require('telescope').setup {
     },
   },
 }
+
 
 -- Enable telescope fzf native, if installed
 pcall(require('telescope').load_extension, 'fzf')
@@ -606,8 +645,8 @@ local mason_on_attach = function(_, bufnr)
   nmap('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
   nmap('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction')
 
-  nmap('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
-  nmap('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
+  -- nmap('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
+  -- nmap('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
   nmap('gI', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
   nmap('<leader>D', require('telescope.builtin').lsp_type_definitions, 'Type [D]efinition')
   nmap('<leader>ds', require('telescope.builtin').lsp_document_symbols, '[D]ocument [S]ymbols')
